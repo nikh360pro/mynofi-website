@@ -8,11 +8,14 @@
     "url": "https://github.com/nikh360pro/mynofi-website.git"
   },
   "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "build:prod": "vite build --mode production",
+    "preview": "vite preview",
     "start": "npx serve -s . -l 3000",
     "serve:dist": "npx serve -s dist -l 3000",
-    "build": "echo 'Skip build as files are pre-built'",
-    "deploy:preview": "npx netlify-cli deploy",
-    "deploy:prod": "npx netlify-cli deploy --prod",
+    "deploy:preview": "npm run build && npx netlify-cli deploy",
+    "deploy:prod": "npm run build:prod && npx netlify-cli deploy --prod",
     "deploy:force": "npx netlify-cli deploy --prod --force",
     "deploy:auth": "npx netlify-cli login",
     "deploy:init": "npx netlify-cli init",
@@ -32,7 +35,16 @@
     "health:check": "curl -I $(npx netlify-cli status --json | jq -r '.site.url') || echo 'Site health check failed'",
     "deployment:verify": "npm run health:check && npm run security:scan && echo '✅ Deployment verified'"
   },
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "@supabase/supabase-js": "^2.39.0"
+  },
   "devDependencies": {
+    "@types/react": "^18.2.37",
+    "@types/react-dom": "^18.2.15",
+    "@vitejs/plugin-react": "^4.0.3",
+    "vite": "^4.4.5",
     "serve": "^14.2.0",
     "netlify-cli": "^17.0.0"
   },

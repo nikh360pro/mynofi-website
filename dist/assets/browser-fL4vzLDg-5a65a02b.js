@@ -1,0 +1,1 @@
+import{U as e}from"./index-f239dc37.js";import"./supabase-cf010ec4.js";var o=function(){throw new Error("ws does not work in the browser. Browser clients must use the native WebSocket object")};const t=e(o),s=Object.freeze(Object.defineProperty({__proto__:null,default:t},Symbol.toStringTag,{value:"Module"}));export{s as b};

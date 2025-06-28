@@ -1,7 +1,7 @@
-# Skip build process since we're deploying pre-built files
+# Build with Vite for proper Supabase integration
 [build]
   publish = "dist"
-  command = "echo 'No build needed - files are pre-built'"
+  command = "npm run build:prod"
 
 # Environment variables for Supabase (REQUIRED for WebSocket connections)
 [build.environment]
