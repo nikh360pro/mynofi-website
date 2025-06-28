@@ -1,89 +1,208 @@
-name: Deploy to Netlify
+name: 🚀 Enhanced Netlify Deployment
 
 on:
   push:
     branches: [ main ]
   pull_request:
     branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      deploy_environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'preview'
+        type: choice
+        options:
+        - preview
+        - production
+
+# Context7 recommended permissions for security
+permissions:
+  contents: read
+  deployments: write
+  statuses: write
+  pull-requests: write
+  issues: write
 
 jobs:
-  deploy:
+  security-scan:
     runs-on: ubuntu-latest
+    name: 🔍 Security & Validation
     
     steps:
-    - name: Checkout code
+    - name: Checkout with security (Context7 best practice)
       uses: actions/checkout@v4
-      
-    - name: Setup Node.js
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        fetch-depth: 0  # Context7: fetch all history for security scanning
+        sparse-checkout: |  # Context7: optimize checkout
+          dist
+          netlify.toml
+          package.json
+          .github
+          
+    - name: 🔍 Advanced Security Audit
+      run: |
+        echo "🔍 Multi-layer security scanning..."
+        
+        # Check for GitHub tokens
+        if grep -r "ghp_" dist/ 2>/dev/null; then
+          echo "❌ Found potential GitHub tokens in dist/"
+          exit 1
+        fi
+        
+        # Check for API keys
+        if grep -r "sk-\|pk_" dist/ 2>/dev/null; then
+          echo "❌ Found potential API keys in dist/"
+          exit 1
+        fi
+        
+        # Check for JWT tokens
+        if grep -r "eyJhbGciOiJIUzI1NiI" dist/ 2>/dev/null; then
+          echo "❌ Found potential JWT tokens in dist/"
+          exit 1
+        fi
+        
+        # Check for Supabase service role keys
+        if grep -r "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9\..*\..*" dist/ 2>/dev/null; then
+          echo "❌ Found potential Supabase service role keys in dist/"
+          exit 1
+        fi
+        
+        # Check for hardcoded URLs that might contain secrets
+        if grep -r "supabase\.co.*secret\|supabase\.co.*key\|supabase\.co.*password" dist/ 2>/dev/null; then
+          echo "❌ Found potential Supabase secrets in URLs"
+          exit 1
+        fi
+        
+        echo "✅ Security scan passed - no credentials detected"
+        
+    - name: 📋 Validate deployment files
+      run: |
+        echo "📋 Validating required files..."
+        test -f dist/index.html || (echo "❌ Missing dist/index.html" && exit 1)
+        test -f netlify.toml || (echo "❌ Missing netlify.toml" && exit 1)
+        test -f dist/_redirects || (echo "❌ Missing dist/_redirects" && exit 1)
+        test -f package.json || (echo "❌ Missing package.json" && exit 1)
+        
+        echo "📊 Checking bundle sizes..."
+        du -sh dist/assets/* 2>/dev/null | head -10 || echo "No assets found"
+        
+        echo "📈 Directory structure validation..."
+        ls -la dist/
+        
+        echo "✅ All validations passed"
+
+  deploy:
+    needs: security-scan
+    runs-on: ubuntu-latest
+    name: 🚀 Deploy to Netlify
+    
+    steps:
+    - name: Checkout repository (Context7 optimized)
+      uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        sparse-checkout: |  # Context7: optimize checkout for deployment
+          dist
+          netlify.toml
+          package.json
+          
+    - name: Setup Node.js (Context7 optimized)
       uses: actions/setup-node@v4
       with:
         node-version: '18'
         cache: 'npm'
         
-    - name: Install dependencies
-      run: npm ci
-      
-    - name: Validate deployment files
-      run: |
-        echo "Checking required files exist..."
-        test -f dist/index.html || exit 1
-        test -f netlify.toml || exit 1
-        test -f dist/_redirects || exit 1
-        echo "✅ All required files present"
+    - name: Install dependencies (production only)
+      run: npm ci --only=prod --ignore-scripts
         
-    - name: Security audit
-      run: |
-        echo "Running security checks..."
-        # Check for sensitive data patterns
-        if grep -r "sk-" dist/ 2>/dev/null; then
-          echo "❌ Found potential API keys in dist/"
-          exit 1
-        fi
-        if grep -r "eyJhbGciOiJIUzI1NiI" dist/ 2>/dev/null; then
-          echo "❌ Found potential JWT tokens in dist/"
-          exit 1
-        fi
-        echo "✅ Security checks passed"
-        
-    - name: Deploy to Netlify (Preview)
-      if: github.event_name == 'pull_request'
+    - name: 🚀 Deploy to Netlify (Preview)
+      if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && github.event.inputs.deploy_environment == 'preview')
       uses: nwtgck/actions-netlify@v3.0
       with:
         publish-dir: './dist'
         production-branch: main
         github-token: ${{ secrets.GITHUB_TOKEN }}
         deploy-message: |
-          Deploy from GitHub Actions - PR #${{ github.event.number }}
-          ${{ github.event.pull_request.title }}
+          🔄 Preview Deploy - ${{ github.event_name }}
+          📝 Commit: ${{ github.sha }}
+          👤 Author: ${{ github.actor }}
+          🌿 Branch: ${{ github.ref_name }}
+          ${{ github.event_name == 'pull_request' && format('🔀 PR #{0}: {1}', github.event.number, github.event.pull_request.title) || '🚀 Manual Deploy' }}
         enable-pull-request-comment: true
         enable-commit-comment: false
+        alias: ${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.number) || format('manual-{0}', github.run_number) }}
       env:
         NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
         NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
         
-    - name: Deploy to Netlify (Production)
-      if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    - name: 🚀 Deploy to Netlify (Production)
+      if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.deploy_environment == 'production'))
       uses: nwtgck/actions-netlify@v3.0
       with:
         publish-dir: './dist'
         production-deploy: true
         github-token: ${{ secrets.GITHUB_TOKEN }}
         deploy-message: |
-          Production deploy from GitHub Actions
-          Commit: ${{ github.sha }}
+          🚀 Production Deploy
+          📝 Commit: ${{ github.sha }}
+          👤 Author: ${{ github.actor }}
+          🕐 Deploy Time: ${{ github.event.head_commit.timestamp }}
         enable-commit-comment: false
       env:
         NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
         NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
         
-    - name: Comment deployment status
+    - name: 💬 Comment deployment status
       if: github.event_name == 'push' && github.ref == 'refs/heads/main'
       uses: actions/github-script@v7
       with:
         script: |
+          const deploymentUrl = process.env.NETLIFY_URL || 'https://app.netlify.com';
+          
           github.rest.repos.createCommitComment({
             owner: context.repo.owner,
             repo: context.repo.repo,
             commit_sha: context.sha,
-            body: '🚀 Website deployed successfully to production!'
+            body: `🚀 **Website deployed successfully to production!**
+            
+            ✅ Security scan passed
+            📦 Build artifacts validated  
+            🌐 Live at: ${deploymentUrl}
+            
+            Deployment completed at: ${new Date().toISOString()}
+            
+            _Automated deployment via GitHub Actions_ 🤖`
+          });
+          
+    - name: 🚨 Notify on deployment failure
+      if: failure()
+      uses: actions/github-script@v7
+      with:
+        script: |
+          github.rest.issues.create({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            title: '🚨 Production Deployment Failed',
+            body: `## 🚨 Deployment Failure Alert
+            
+            **Failed Workflow:** ${context.workflow}
+            **Run ID:** ${context.runId}
+            **Commit:** ${context.sha}
+            **Branch:** ${context.ref}
+            **Actor:** ${context.actor}
+            
+            ### 🔗 Quick Links
+            - [View Failed Run](${context.payload.repository.html_url}/actions/runs/${context.runId})
+            - [View Commit](${context.payload.repository.html_url}/commit/${context.sha})
+            
+            ### 🛠️ Next Steps
+            1. Check the workflow logs for detailed error information
+            2. Verify all required secrets are configured correctly
+            3. Ensure the deployment files are valid
+            4. Run local tests before retrying deployment
+            
+            _This issue was created automatically by GitHub Actions._`,
+            labels: ['bug', 'deployment', 'urgent']
           });
