@@ -145,14 +145,70 @@ jobs:
         production-deploy: true
         github-token: ${{ secrets.GITHUB_TOKEN }}
         deploy-message: |
-          🚀 Production Deploy
+          🚀 Production Deploy - CACHE BUSTED
           📝 Commit: ${{ github.sha }}
           👤 Author: ${{ github.actor }}
           🕐 Deploy Time: ${{ github.event.head_commit.timestamp }}
+          🔄 Cache: Invalidated for fresh deployment
         enable-commit-comment: false
+        functions-dir: './functions'
+        alias: production-${{ github.run_number }}
       env:
         NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
         NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+        
+    - name: 🔄 Force Cache Invalidation
+      if: github.ref == 'refs/heads/main'
+      run: |
+        echo "🔄 Forcing cache invalidation..."
+        # Netlify cache purge via API
+        curl -X POST "https://api.netlify.com/api/v1/sites/${{ secrets.NETLIFY_SITE_ID }}/builds" \
+          -H "Authorization: Bearer ${{ secrets.NETLIFY_AUTH_TOKEN }}" \
+          -H "Content-Type: application/json" \
+          -d '{"clear_cache": true}' || echo "Cache clear API call failed (continuing)"
+        
+        # Additional cache headers verification
+        sleep 30 # Wait for deployment to propagate
+        
+    - name: 🔍 Deployment Verification
+      if: github.ref == 'refs/heads/main'
+      run: |
+        echo "🔍 Verifying deployment..."
+        
+        # Get site URL from Netlify
+        SITE_URL=$(curl -s -H "Authorization: Bearer ${{ secrets.NETLIFY_AUTH_TOKEN }}" \
+          "https://api.netlify.com/api/v1/sites/${{ secrets.NETLIFY_SITE_ID }}" | \
+          jq -r '.url' || echo "")
+        
+        if [ -n "$SITE_URL" ]; then
+          echo "🌐 Testing site: $SITE_URL"
+          
+          # Check if site is accessible
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$SITE_URL" || echo "000")
+          echo "📊 HTTP Status: $HTTP_STATUS"
+          
+          # Check cache headers
+          echo "🔍 Checking cache headers..."
+          curl -I "$SITE_URL" 2>/dev/null | grep -i cache-control || echo "No cache-control header found"
+          
+          # Verify asset with cache-busting
+          echo "🔍 Checking asset availability..."
+          curl -s -o /dev/null -w "%{http_code}" "$SITE_URL/assets/index-BfMtTUO6.js?v=20250628" || echo "Asset check failed"
+          
+          # Check for cache-bust meta tag
+          echo "🔍 Verifying cache-bust implementation..."
+          curl -s "$SITE_URL" | grep "cache-bust" || echo "⚠️ Cache-bust meta tag not found"
+          
+          if [ "$HTTP_STATUS" = "200" ]; then
+            echo "✅ Deployment verification successful"
+          else
+            echo "❌ Deployment verification failed - HTTP $HTTP_STATUS"
+            exit 1
+          fi
+        else
+          echo "❌ Could not determine site URL"
+          exit 1
+        fi
         
     - name: 💬 Comment deployment status
       if: github.event_name == 'push' && github.ref == 'refs/heads/main'
