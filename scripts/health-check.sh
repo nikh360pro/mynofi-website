@@ -144,18 +144,60 @@ check_content() {
     fi
 }
 
-# Function to check Supabase connectivity (if applicable)
+# Function to check Supabase connectivity and WebSocket support
 check_supabase() {
     local url=$1
     
-    echo "🔍 Checking Supabase integration..."
+    echo "🔍 Checking Supabase integration and WebSocket connectivity..."
     
+    # Check if page contains Supabase references
     local content=$(curl -s --max-time $TIMEOUT "$url" 2>/dev/null || echo "")
     
     if echo "$content" | grep -q "supabase"; then
-        log_info "Supabase integration detected"
+        log_info "Supabase integration detected in page content"
     else
-        log_warn "Supabase integration not explicitly found"
+        log_warn "Supabase integration not found in page content"
+    fi
+    
+    # Check for Supabase fix meta tag
+    if echo "$content" | grep -q "supabase-fix"; then
+        log_info "Supabase WebSocket fix implementation detected"
+    else
+        log_warn "Supabase WebSocket fix meta tag not found"
+    fi
+    
+    # Test direct Supabase connectivity
+    echo "🌐 Testing direct Supabase connectivity..."
+    local supabase_url="https://mizniptrapkrykarqaha.supabase.co/rest/v1/"
+    local supabase_status=$(curl -s -o /dev/null -w "%{http_code}" --max-time $TIMEOUT \
+        -H "apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1pem5pcHRyYXBrcnlrYXJxYWhhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDkwMTc2MzUsImV4cCI6MjA2NDU5MzYzNX0.A6xmnfudPmPfnxeidJFQbJYRb96u06sDEQ0AdBpXz8s" \
+        "$supabase_url" 2>/dev/null || echo "000")
+    
+    if [ "$supabase_status" = "200" ] || [ "$supabase_status" = "401" ] || [ "$supabase_status" = "404" ]; then
+        log_info "Supabase REST API is accessible (HTTP $supabase_status)"
+    else
+        log_error "Supabase REST API connectivity failed (HTTP $supabase_status)"
+    fi
+    
+    # Test WebSocket connectivity (basic check)
+    echo "🔌 Testing WebSocket endpoint accessibility..."
+    local ws_endpoint="https://mizniptrapkrykarqaha.supabase.co/realtime/v1/websocket"
+    local ws_status=$(curl -s -o /dev/null -w "%{http_code}" --max-time $TIMEOUT "$ws_endpoint" 2>/dev/null || echo "000")
+    
+    if [ "$ws_status" = "400" ] || [ "$ws_status" = "426" ] || [ "$ws_status" = "101" ]; then
+        log_info "WebSocket endpoint is accessible (HTTP $ws_status - WebSocket upgrade expected)"
+    else
+        log_warn "WebSocket endpoint check returned HTTP $ws_status"
+    fi
+    
+    # Check CSP headers for WebSocket permissions
+    echo "🔒 Checking Content Security Policy for WebSocket permissions..."
+    local csp_header=$(curl -s -I --max-time $TIMEOUT "$url" 2>/dev/null | grep -i "content-security-policy" || echo "")
+    
+    if echo "$csp_header" | grep -q "wss://.*supabase.co"; then
+        log_info "CSP allows WebSocket connections to Supabase"
+    else
+        log_warn "CSP may not properly allow WebSocket connections"
     fi
 }
 
