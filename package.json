@@ -1,0 +1,12 @@
+{
+  "name": "mynofi-website",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "start": "npx serve -s . -l 3000",
+    "build": "echo 'Skip build as files are pre-built'"
+  },
+  "devDependencies": {
+    "serve": "^14.2.0"
+  }
+}

@@ -1,0 +1,10 @@
+# Skip build process since we're deploying pre-built files
+[build]
+  publish = "dist"
+  command = "echo 'No build needed'"
+
+# This redirects any path to index.html so that React Router can handle routing
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200 

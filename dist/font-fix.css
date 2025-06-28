@@ -1,0 +1,22 @@
+/* Font fix for preventing 403 errors from external font URLs */
+/* Override font families to use Google Fonts and system fonts */
+
+html, :host {
+  font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif !important;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif !important;
+}
+
+code, kbd, samp, pre, .font-mono {
+  font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace !important;
+}
+
+/* Remove any @font-face rules that might be causing 403 errors */
+@supports (font-display: swap) {
+  /* Use font-display: swap for better performance */
+  * {
+    font-display: swap;
+  }
+}
