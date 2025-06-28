@@ -2,11 +2,37 @@
   "name": "mynofi-website",
   "private": true,
   "version": "1.0.0",
+  "description": "Mynofi monitoring tool marketing website - React SPA with Supabase integration",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/[USERNAME]/mynofi-website.git"
+  },
   "scripts": {
     "start": "npx serve -s . -l 3000",
-    "build": "echo 'Skip build as files are pre-built'"
+    "serve:dist": "npx serve -s dist -l 3000",
+    "build": "echo 'Skip build as files are pre-built'",
+    "deploy:preview": "npx netlify-cli deploy",
+    "deploy:prod": "npx netlify-cli deploy --prod",
+    "deploy:auth": "npx netlify-cli login",
+    "deploy:init": "npx netlify-cli init",
+    "deploy:status": "npx netlify-cli status",
+    "deploy:open": "npx netlify-cli open --site",
+    "test:serve": "npm run serve:dist",
+    "validate:links": "npx netlify-cli dev",
+    "env:setup": "cp .env.example .env.local && echo 'Created .env.local - please update with your Supabase credentials'"
   },
   "devDependencies": {
-    "serve": "^14.2.0"
-  }
+    "serve": "^14.2.0",
+    "netlify-cli": "^17.0.0"
+  },
+  "keywords": [
+    "mynofi",
+    "monitoring",
+    "react",
+    "supabase",
+    "netlify",
+    "spa"
+  ],
+  "author": "Mynofi Team",
+  "license": "MIT"
 }
