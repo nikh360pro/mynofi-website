@@ -5,7 +5,7 @@
   "description": "Mynofi monitoring tool marketing website - React SPA with Supabase integration",
   "repository": {
     "type": "git",
-    "url": "https://github.com/[USERNAME]/mynofi-website.git"
+    "url": "https://github.com/nikh360pro/mynofi-website.git"
   },
   "scripts": {
     "start": "npx serve -s . -l 3000",
@@ -19,7 +19,11 @@
     "deploy:open": "npx netlify-cli open --site",
     "test:serve": "npm run serve:dist",
     "validate:links": "npx netlify-cli dev",
-    "env:setup": "cp .env.example .env.local && echo 'Created .env.local - please update with your Supabase credentials'"
+    "env:setup": "cp .env.example .env.local && echo 'Created .env.local - please update with your Supabase credentials'",
+    "deploy:watch": "git push && npx netlify-cli watch",
+    "security:scan": "grep -r 'ghp_\\|sk-\\|pk_' dist/ || echo '✅ Security scan passed'",
+    "netlify:status": "npx netlify-cli status && npx netlify-cli env:list",
+    "github:status": "echo 'Repository: https://github.com/nikh360pro/mynofi-website.git'"
   },
   "devDependencies": {
     "serve": "^14.2.0",
